@@ -1,16 +1,52 @@
-# React + Vite
+# Ghoten UI - Terraform Cloud Clone
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, serverless web interface for managing Terraform infrastructure using the ORAS backend in OpenTofu. No backend servers required — everything runs client-side using GitHub APIs.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🔐 **GitHub OAuth Authentication** - Secure login with GitHub
+- 📦 **Automatic Project Detection** - Scans your organization for `.ghoten/project.yaml` configurations
+- 🏗️ **Workspace Management** - View and manage Terraform workspaces
+- 🚀 **Plan & Apply** - Trigger Terraform operations directly from the UI
+- 📊 **Run Monitoring** - View workflow run status and logs in real-time
+- 🔒 **Sensitive Data Redaction** - Automatically masks secrets and credentials in logs
+- 📱 **Responsive Design** - Works on desktop, tablet, and mobile
 
-## React Compiler
+## Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js >= 20.0
+- GitHub OAuth App credentials
+- Organization repositories with `.ghoten/project.yaml` files
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Installation
+
+```bash
+git clone https://github.com/vmvarela/ghoten-ui.git
+cd ghoten-ui
+npm install
+cp .env.example .env
+# Edit .env with your GitHub OAuth credentials
+```
+
+### Development
+
+```bash
+npm run dev      # Start dev server
+npm run build    # Build for production
+npm run preview  # Preview production build
+```
+
+## Configuration
+
+Create `.env` with your GitHub OAuth App credentials:
+
+```env
+VITE_GITHUB_CLIENT_ID=your_oauth_app_client_id
+VITE_GITHUB_ORG=your_organization_name
+```
+
+## License
+
+Mozilla Public License 2.0
