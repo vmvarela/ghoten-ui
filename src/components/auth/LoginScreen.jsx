@@ -7,6 +7,9 @@ export function LoginScreen() {
   const [error, setError] = useState(null);
   const [polling, setPolling] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualToken, setManualToken] = useState('');
+  const [manualError, setManualError] = useState(null);
 
   const startFlow = async () => {
     try {
@@ -18,7 +21,7 @@ export function LoginScreen() {
       window.open(info.verification_uri, '_blank');
       setPolling(true);
     } catch (err) {
-      setError(err.message || 'Failed to start login');
+      setError(err.message || 'Failed to start login (device flow)');
     }
   };
 
@@ -72,14 +75,22 @@ export function LoginScreen() {
             </p>
           </div>
 
-          {!deviceInfo && (
-            <button
-              onClick={startFlow}
-              className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95"
-            >
-              <Github className="w-5 h-5" />
-              Login with GitHub
-            </button>
+          {!deviceInfo && !manualMode && (
+            <div className="space-y-3">
+              <button
+                onClick={startFlow}
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95"
+              >
+                <Github className="w-5 h-5" />
+                Login with GitHub (Device Flow)
+              </button>
+              <button
+                onClick={() => { setManualMode(true); setManualError(null); setError(null); }}
+                className="w-full text-sm text-slate-300 underline decoration-dashed decoration-slate-500 hover:text-white"
+              >
+                Or paste a Personal Access Token manually
+              </button>
+            </div>
           )}
 
           {deviceInfo && (
@@ -106,6 +117,55 @@ export function LoginScreen() {
                 <Clock className="w-4 h-4" />
                 Waiting for authorization...
               </div>
+            </div>
+          )}
+
+          {manualMode && (
+            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
+              <p className="text-slate-300 text-sm">Paste a fine-grained Personal Access Token with scopes:</p>
+              <ul className="list-disc list-inside text-slate-400 text-sm">
+                <li>repo</li>
+                <li>workflow</li>
+                <li>read:packages</li>
+                <li>read:org</li>
+              </ul>
+              <textarea
+                value={manualToken}
+                onChange={(e) => setManualToken(e.target.value)}
+                rows={3}
+                className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white font-mono"
+                placeholder="ghp_..."
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setManualMode(false);
+                    setManualToken('');
+                    setManualError(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!manualToken.trim()) {
+                      setManualError('Token is required');
+                      return;
+                    }
+                    AuthService.saveToken(manualToken.trim());
+                    window.location.href = `${import.meta.env.BASE_URL || '/ghoten-ui/'}projects`;
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Save token
+                </button>
+              </div>
+              {manualError && (
+                <div className="p-2 rounded bg-red-900/30 border border-red-700 text-red-200 text-sm">
+                  {manualError}
+                </div>
+              )}
             </div>
           )}
 
