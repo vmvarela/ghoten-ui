@@ -5,7 +5,7 @@ import { ConfigParser } from '../../services/configParser';
 import { RedactionService } from '../../services/redaction';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
 import { StatusBadge } from '../shared/StatusBadge';
-import { ChevronLeft, Play, LogSquare } from 'lucide-react';
+import { ChevronLeft, Play, Activity } from 'lucide-react';
 
 export function WorkspaceDetail() {
   const { owner, repo, workspace } = useParams();
@@ -138,7 +138,7 @@ export function WorkspaceDetail() {
                   </div>
                   <div className="flex items-center gap-4">
                     <StatusBadge status={run.conclusion || 'in_progress'} />
-                    <LogSquare className="w-4 h-4 text-slate-400" />
+                    <Activity className="w-4 h-4 text-slate-400" />
                   </div>
                 </div>
               ))}
