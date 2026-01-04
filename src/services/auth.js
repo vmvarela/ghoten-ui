@@ -3,7 +3,8 @@
  * Handle OAuth2 authentication with GitHub
  */
 
-const GITHUB_OAUTH_URL = 'https://github.com/login/oauth/authorize';
+const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
+const GITHUB_OAUTH_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 
 export class AuthService {
   static getClientId() {
@@ -13,6 +14,66 @@ export class AuthService {
   static getRedirectUri() {
     const basePath = import.meta.env.BASE_URL || '/ghoten-ui/';
     return `${window.location.origin}${basePath}callback`;
+  }
+
+  /**
+   * Start OAuth Device Flow (does not require client secret)
+   */
+  static async startDeviceFlow() {
+    const clientId = this.getClientId();
+    if (!clientId) throw new Error('Missing VITE_GITHUB_CLIENT_ID');
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      scope: 'repo,workflow,read:packages,read:org'
+    });
+
+    const res = await fetch(GITHUB_DEVICE_CODE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+      body: params
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to start device flow');
+    }
+
+    return res.json();
+  }
+
+  /**
+   * Poll token endpoint using device_code
+   */
+  static async pollDeviceFlow(deviceCode, intervalSeconds = 5) {
+    const clientId = this.getClientId();
+    const params = new URLSearchParams({
+      client_id: clientId,
+      device_code: deviceCode,
+      grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+    });
+
+    const res = await fetch(GITHUB_OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+      body: params
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to poll device flow');
+    }
+
+    const data = await res.json();
+    if (data.error === 'authorization_pending') {
+      return { pending: true, interval: intervalSeconds };
+    }
+    if (data.error === 'slow_down') {
+      return { pending: true, interval: intervalSeconds + 5 };
+    }
+    if (data.error) {
+      throw new Error(data.error_description || data.error);
+    }
+
+    return { token: data.access_token };
   }
 
   /**
