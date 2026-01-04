@@ -6,7 +6,7 @@ import { LoadingSpinner } from '../shared/LoadingSpinner';
 import { EmptyState } from '../shared/EmptyState';
 import { Folder, ExternalLink } from 'lucide-react';
 
-export function ProjectList({ organization }) {
+export function ProjectList({ organization, userLogin }) {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,37 +17,52 @@ export function ProjectList({ organization }) {
       try {
         setLoading(true);
         const github = new GitHubService();
-        let repos = [];
+        const projectsList = [];
 
-        try {
-          repos = await github.listOrgRepositories(organization);
-        } catch (orgErr) {
-          // If org lookup fails (personal account), fall back to user repos
-          repos = await github.listUserRepositories(organization);
+        const seen = new Set();
+
+        const collectProjects = async (repos) => {
+          for (const repo of repos) {
+            try {
+              const configContent = await github.getFileContent(
+                repo.owner.login,
+                repo.name,
+                '.ghoten/project.yaml'
+              );
+              const config = ConfigParser.parseProjectConfig(configContent);
+              if (ConfigParser.validate(config, 'project')) {
+                const key = `${repo.owner.login}/${repo.name}`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  projectsList.push({
+                    ...config,
+                    repo: repo.name,
+                    owner: repo.owner.login,
+                    description: repo.description || config.description,
+                    url: repo.html_url
+                  });
+                }
+              }
+            } catch (err) {
+              // Not a Terraform project, skip
+            }
+          }
+        };
+
+        // 1) Try org repos if provided
+        if (organization) {
+          try {
+            const orgRepos = await github.listOrgRepositories(organization);
+            await collectProjects(orgRepos);
+          } catch (orgErr) {
+            // ignore, we'll try user next
+          }
         }
 
-        const projectsList = [];
-        for (const repo of repos) {
-          try {
-            const configContent = await github.getFileContent(
-              repo.owner.login,
-              repo.name,
-              '.ghoten/project.yaml'
-            );
-            const config = ConfigParser.parseProjectConfig(configContent);
-            
-            if (ConfigParser.validate(config, 'project')) {
-              projectsList.push({
-                ...config,
-                repo: repo.name,
-                owner: repo.owner.login,
-                description: repo.description || config.description,
-                url: repo.html_url
-              });
-            }
-          } catch (err) {
-            // Not a Terraform project, skip
-          }
+        // 2) Always try user-owned repos (covers personal accounts or empty orgs)
+        if (userLogin) {
+          const userRepos = await github.listUserRepositories(userLogin);
+          await collectProjects(userRepos);
         }
 
         setProjects(projectsList);
@@ -58,10 +73,10 @@ export function ProjectList({ organization }) {
       }
     };
 
-    if (organization) {
+    if (organization || userLogin) {
       loadProjects();
     }
-  }, [organization]);
+  }, [organization, userLogin]);
 
   if (loading) {
     return <LoadingSpinner message="Scanning repositories for Terraform projects..." />;

@@ -101,7 +101,7 @@ function App() {
             <Layout user={user} onLogout={handleLogout}>
               <ProtectedRoute isAuthenticated={isAuthenticated} userOrg={userOrg}>
                 <h1 className="text-3xl font-bold text-white mb-8">Projects</h1>
-                {userOrg && <ProjectList organization={userOrg} />}
+                {userOrg && <ProjectList organization={userOrg} userLogin={user?.login} />}
               </ProtectedRoute>
             </Layout>
           }
