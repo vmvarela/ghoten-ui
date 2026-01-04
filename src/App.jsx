@@ -85,7 +85,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL || '/ghoten-ui/'}>
       <Routes>
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/callback" element={<CallbackHandler />} />
