@@ -11,7 +11,8 @@ export class AuthService {
   }
 
   static getRedirectUri() {
-    return `${window.location.origin}/callback`;
+    const basePath = import.meta.env.BASE_URL || '/ghoten-ui/';
+    return `${window.location.origin}${basePath}callback`;
   }
 
   /**
