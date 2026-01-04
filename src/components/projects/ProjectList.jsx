@@ -17,7 +17,14 @@ export function ProjectList({ organization }) {
       try {
         setLoading(true);
         const github = new GitHubService();
-        const repos = await github.listOrgRepositories(organization);
+        let repos = [];
+
+        try {
+          repos = await github.listOrgRepositories(organization);
+        } catch (orgErr) {
+          // If org lookup fails (personal account), fall back to user repos
+          repos = await github.listUserRepositories(organization);
+        }
 
         const projectsList = [];
         for (const repo of repos) {

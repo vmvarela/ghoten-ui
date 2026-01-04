@@ -93,6 +93,26 @@ export class GitHubService {
   }
 
   /**
+   * List repositories for a user (personal account)
+   */
+  async listUserRepositories(user) {
+    return this.getCached(`user-repos:${user}`, async () => {
+      const repos = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const result = await this.request(`/users/${user}/repos?per_page=100&page=${page}&type=owner&sort=updated&direction=desc`);
+        repos.push(...result);
+        hasMore = result.length === 100;
+        page++;
+      }
+
+      return repos;
+    });
+  }
+
+  /**
    * Get file content from repository
    */
   async getFileContent(owner, repo, path) {
