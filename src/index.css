@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 * {
   margin: 0;
@@ -19,7 +17,6 @@ body {
   line-height: 1.6;
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -38,7 +35,6 @@ body {
   background: rgb(100, 116, 139);
 }
 
-/* Animations */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
