@@ -93,17 +93,22 @@ export class GitHubService {
   }
 
   /**
-   * List repositories for a user (personal account)
+   * List repositories for the authenticated user (personal account, includes private)
    */
   async listUserRepositories(user) {
     return this.getCached(`user-repos:${user}`, async () => {
       const repos = [];
       let page = 1;
       let hasMore = true;
+      const target = (user || '').toLowerCase();
 
       while (hasMore) {
-        const result = await this.request(`/users/${user}/repos?per_page=100&page=${page}&type=owner&sort=updated&direction=desc`);
-        repos.push(...result);
+        const result = await this.request(
+          `/user/repos?per_page=100&page=${page}&affiliation=owner&visibility=all&sort=updated&direction=desc`
+        );
+
+        const owned = result.filter((r) => r.owner?.login?.toLowerCase() === target);
+        repos.push(...owned);
         hasMore = result.length === 100;
         page++;
       }
