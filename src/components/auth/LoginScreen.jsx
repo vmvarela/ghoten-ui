@@ -1,58 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { AuthService } from '../../services/auth';
-import { Github, Clock } from 'lucide-react';
+import { GitHubService } from '../../services/github';
+import { Github, Key } from 'lucide-react';
 
 export function LoginScreen() {
-  const [deviceInfo, setDeviceInfo] = useState(null);
+  const [token, setToken] = useState('');
   const [error, setError] = useState(null);
-  const [polling, setPolling] = useState(false);
-  const [intervalSeconds, setIntervalSeconds] = useState(5);
-  const [manualMode, setManualMode] = useState(false);
-  const [manualToken, setManualToken] = useState('');
-  const [manualError, setManualError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const startFlow = async () => {
+  const handleLogin = async () => {
+    if (!token.trim()) {
+      setError('Token is required');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
     try {
-      setError(null);
-      setPolling(false);
-      const info = await AuthService.startDeviceFlow();
-      setDeviceInfo(info);
-      setIntervalSeconds(info.interval || 5);
-      window.open(info.verification_uri, '_blank');
-      setPolling(true);
+      // Verify token works
+      const github = new GitHubService(token.trim());
+      await github.getCurrentUser();
+      
+      // Save and redirect
+      AuthService.saveToken(token.trim());
+      window.location.href = `${import.meta.env.BASE_URL || '/ghoten-ui/'}projects`;
     } catch (err) {
-      setError(err.message || 'Failed to start login (device flow)');
+      setError('Invalid token or insufficient permissions');
+      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    let timer;
-    const poll = async () => {
-      if (!deviceInfo || !polling) return;
-      try {
-        const result = await AuthService.pollDeviceFlow(deviceInfo.device_code, intervalSeconds);
-        if (result.pending) {
-          timer = setTimeout(poll, (result.interval || intervalSeconds) * 1000);
-          return;
-        }
-        if (result.token) {
-          AuthService.saveToken(result.token);
-          window.location.href = `${import.meta.env.BASE_URL || '/ghoten-ui/'}projects`;
-        }
-      } catch (err) {
-        setError(err.message);
-        setPolling(false);
-      }
-    };
-
-    if (polling && deviceInfo) {
-      timer = setTimeout(poll, intervalSeconds * 1000);
-    }
-
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [polling, deviceInfo, intervalSeconds]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
@@ -71,103 +48,36 @@ export function LoginScreen() {
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">Welcome</h2>
             <p className="text-slate-400">
-              Manage your Terraform infrastructure with a modern web interface. Authenticate with GitHub to get started.
+              Enter your GitHub Personal Access Token to get started.
             </p>
           </div>
 
-          {!deviceInfo && !manualMode && (
-            <div className="space-y-3">
-              <button
-                onClick={startFlow}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95"
-              >
-                <Github className="w-5 h-5" />
-                Login with GitHub (Device Flow)
-              </button>
-              <button
-                onClick={() => { setManualMode(true); setManualError(null); setError(null); }}
-                className="w-full text-sm text-slate-300 underline decoration-dashed decoration-slate-500 hover:text-white"
-              >
-                Or paste a Personal Access Token manually
-              </button>
-            </div>
-          )}
-
-          {deviceInfo && (
-            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-              <p className="text-slate-300 text-sm mb-2">Step 1: Open GitHub</p>
-              <p className="text-slate-400 text-xs mb-3">We opened a new tab. If not, click below:</p>
-              <a
-                href={deviceInfo.verification_uri}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 text-sm"
-              >
-                {deviceInfo.verification_uri}
-              </a>
-
-              <div className="mt-4">
-                <p className="text-slate-300 text-sm mb-1">Step 2: Enter this code</p>
-                <div className="font-mono text-xl text-white bg-slate-800 px-4 py-2 rounded border border-slate-700 inline-block">
-                  {deviceInfo.user_code}
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center gap-2 text-slate-400 text-sm">
-                <Clock className="w-4 h-4" />
-                Waiting for authorization...
-              </div>
-            </div>
-          )}
-
-          {manualMode && (
-            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
-              <p className="text-slate-300 text-sm">Paste a fine-grained Personal Access Token with scopes:</p>
-              <ul className="list-disc list-inside text-slate-400 text-sm">
-                <li>repo</li>
-                <li>workflow</li>
-                <li>read:packages</li>
-                <li>read:org</li>
-              </ul>
-              <textarea
-                value={manualToken}
-                onChange={(e) => setManualToken(e.target.value)}
-                rows={3}
-                className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white font-mono"
-                placeholder="ghp_..."
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                <Key className="w-4 h-4 inline mr-2" />
+                Personal Access Token
+              </label>
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                disabled={loading}
               />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setManualMode(false);
-                    setManualToken('');
-                    setManualError(null);
-                  }}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (!manualToken.trim()) {
-                      setManualError('Token is required');
-                      return;
-                    }
-                    AuthService.saveToken(manualToken.trim());
-                    window.location.href = `${import.meta.env.BASE_URL || '/ghoten-ui/'}projects`;
-                  }}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  Save token
-                </button>
-              </div>
-              {manualError && (
-                <div className="p-2 rounded bg-red-900/30 border border-red-700 text-red-200 text-sm">
-                  {manualError}
-                </div>
-              )}
             </div>
-          )}
+
+            <button
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-slate-600 disabled:to-slate-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200"
+            >
+              <Github className="w-5 h-5" />
+              {loading ? 'Verifying...' : 'Login'}
+            </button>
+          </div>
 
           {error && (
             <div className="p-3 rounded bg-red-900/30 border border-red-700 text-red-200 text-sm">
@@ -175,24 +85,24 @@ export function LoginScreen() {
             </div>
           )}
 
-          <div className="space-y-3 text-sm text-slate-400">
-            <div>
-              <h3 className="font-semibold text-white mb-2">What you can do:</h3>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Manage Terraform projects</li>
-                <li>View workspaces</li>
-                <li>Trigger plan/apply operations</li>
-                <li>Monitor infrastructure changes</li>
-              </ul>
+          <div className="border-t border-slate-700 pt-4">
+            <p className="text-sm text-slate-400 mb-2">Required scopes:</p>
+            <div className="flex flex-wrap gap-2">
+              {['repo', 'workflow', 'read:packages', 'read:org'].map((scope) => (
+                <span key={scope} className="px-2 py-1 bg-slate-900 rounded text-xs text-slate-300 font-mono">
+                  {scope}
+                </span>
+              ))}
             </div>
+            <a
+              href="https://github.com/settings/tokens/new?scopes=repo,workflow,read:packages,read:org&description=Ghoten%20UI"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-3 text-blue-400 hover:text-blue-300 text-sm"
+            >
+              Create a new token →
+            </a>
           </div>
-        </div>
-
-        <div className="mt-8 text-center text-xs text-slate-500">
-          <p>
-            By logging in, you agree to GitHub OAuth permissions:<br />
-            repo, workflow, read:packages, read:org
-          </p>
         </div>
       </div>
     </div>
