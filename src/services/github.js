@@ -144,13 +144,24 @@ export class GitHubService {
   }
 
   /**
+   * Get repository details (including default branch)
+   */
+  async getRepository(owner, repo) {
+    return this.request(`/repos/${owner}/${repo}`);
+  }
+
+  /**
    * Dispatch a workflow
    */
   async dispatchWorkflow(owner, repo, workflowId, inputs = {}) {
+    // Get default branch
+    const repoData = await this.getRepository(owner, repo);
+    const defaultBranch = repoData.default_branch || 'main';
+
     return this.request(`/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`, {
       method: 'POST',
       body: JSON.stringify({
-        ref: 'main',
+        ref: defaultBranch,
         inputs
       })
     });
