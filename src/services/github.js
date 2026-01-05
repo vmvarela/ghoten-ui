@@ -48,6 +48,11 @@ export class GitHubService {
       throw new Error(error.message || `API Error: ${response.status}`);
     }
 
+    // Handle 204 No Content (workflow dispatch returns this)
+    if (response.status === 204) {
+      return null;
+    }
+
     return response.json();
   }
 
